@@ -22,51 +22,52 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AntDesign } from '@expo/vector-icons';
 
 export default function App() {
+    
+    const image = require('./src/assets/bg.jpg');
+    
+    const [ tasks, setTasks ] = useState([]);
+    
+    const [ modalVisible, setModalVisible ] = useState(false);
+    
+    const [ currentTask, setCurrentTask ] = useState('');
 
     let [ fontsLoaded ] = useFonts({
         Jost_400Regular,
         Jost_600SemiBold,
     });
 
-    const image = require('./src/assets/bg.jpg');
-
-    const [ tarefas, setTarefas ] = useState([]);
-
-    const [ modal, setModal ] = useState(false);
-
-    const [ tarefaAtual, setTarefaAtual ] = useState('');
-
     useEffect(()=> {
         (async ()=> {
-            try{
-                let tarefasAtual = await AsyncStorage.getItem('tarefas');
-                if(tarefasAtual == null)
-                    setTarefas([]);
+            try {
+                let currentTasks = await AsyncStorage.getItem('tasks');
+                if(currentTasks == null)
+                    setTasks([]);
                 else
-                    setTarefas(JSON.parse(tarefasAtual));
-            }catch(error){}
+                    setTasks(JSON.parse(currentTasks));
+                } catch(error){}
         })();
     }, [])
 
-    function deletarTarefa(id){
+    if(!fontsLoaded)
+        return <AppLoading/>
 
-        let newTarefas = tarefas.filter(function(val){
+    function deleteTask(id){
+        let newTask = tasks.filter(function(val){
             return val.id != id;
         });
 
-        setTarefas(newTarefas);
+        setTasks(newTask);
 
         (async ()=> {
-            try{
-                await AsyncStorage.setItem('tarefas', JSON.stringify(newTarefas));
+            try {
+                await AsyncStorage.setItem('tasks', JSON.stringify(newTask));
 
             } catch(error){}
         })();
     }
 
     function handleDelete(id){
-
-        Alert.alert("Deletar", 'Deseja mesmo deletar essa tarefa?',[
+        Alert.alert("Deletar", 'Deseja mesmo deletar a tarefa?',[
             {
                 text: 'Não',
                 style: 'cancel',
@@ -75,7 +76,7 @@ export default function App() {
                 text: 'Sim',
                 onPress: async ()=> {
                     try {
-                        deletarTarefa(id);
+                        deleteTask(id);
                     } catch(error){
                         Alert.alert("Não foi possível deletar!");
                     }
@@ -84,33 +85,30 @@ export default function App() {
         ])
     }
 
-    function addTarefa() {
+    function addTask() {
 
-        if(!tarefas)
+        if(!tasks)
             return Alert.alert('Por favor digite uma tarefa');
 
-        setModal(!modal);
+        setModalVisible(!modalVisible);
 
         let id = 0;
-        if(tarefas.length > 0){
-            id = tarefas[tarefas.length-1].id + 1;
+        if(tasks.length > 0){
+            id = tasks[tasks.length-1].id + 1;
         }
 
-        let tarefa = {id:id,tarefa:tarefaAtual};
+        let task = {id:id, task:currentTask};
 
-        setTarefas([...tarefas, tarefa]);
+        setTasks([...tasks, task]);
 
         (async ()=> {
         
             try {
-                await AsyncStorage.setItem('tarefas', JSON.stringify([...tarefas, tarefa]));
+                await AsyncStorage.setItem('tasks', JSON.stringify([...tasks, task]));
             } catch(error){}
             
         })();
     }
-
-    if(!fontsLoaded)
-        return <AppLoading/>
 
     return (
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -118,16 +116,13 @@ export default function App() {
             <Modal
                 animationType="slide"
                 transparent={true}
-                visible={modal}
-                onRequestClose={() => {
-                    Alert.alert("Modal has been closed!");
-                }}
+                visible={modalVisible}
             >
                 <View style={styles.centeredView}>
                     <View style={styles.modalView}>
                         <TextInput
                             style={styles.input}
-                            onChangeText={text => setTarefaAtual(text)}
+                            onChangeText={text => setCurrentTask(text)}
                             placeholder="Nova Tarefa"
                         />
 
@@ -135,7 +130,7 @@ export default function App() {
                             <TouchableHighlight
                                 style={styles.cancelButton}
                                 onPress={() => {
-                                    setModal(!modal);
+                                    setModalVisible(!modalVisible);
                                 }}
                             >
                                 <Text style={styles.cancelText}>Cancelar</Text>
@@ -143,7 +138,7 @@ export default function App() {
 
                             <TouchableHighlight
                                 style={styles.saveButton}
-                                onPress={() => addTarefa() }
+                                onPress={() => addTask() }
                             >
                                 <Text style={styles.saveText}>Adicionar</Text>
                             </TouchableHighlight>
@@ -159,37 +154,37 @@ export default function App() {
             </ImageBackground>
 
             {
-            tarefas.map(function(val){
-                return(
-                    <View style={styles.tarefaSingle}>
+                tasks.map(function(val) {
+                    return(
+                        <View style={styles.tarefaSingle} key={val.id} >
 
-                        <View style={{flex:1, width: '100%'}}>
-                            <Text style={{fontFamily: 'Jost_400Regular'}}>{val.tarefa}</Text>
+                            <View style={{flex:1, width: '100%'}}>
+                                <Text style={{fontFamily: 'Jost_400Regular'}}>{val.task}</Text>
+                            </View>
+
+                            <View style={{alignItems: 'flex-end', flex: 1}} >
+
+                                <TouchableOpacity
+                                    onPress={()=>
+                                        handleDelete(val.id)
+                                    }
+                                >
+                                    <AntDesign
+                                        name='delete'
+                                        size={20}
+                                        color='#E83F5B'
+                                    />
+                                </TouchableOpacity>
+                            </View>
+
                         </View>
-
-                        <View style={{alignItems: 'flex-end', flex: 1}} >
-
-                            <TouchableOpacity
-                                onPress={()=>
-                                    handleDelete(val.id)
-                                }
-                            >
-                                <AntDesign
-                                    name='delete'
-                                    size={20}
-                                    color='#E83F5B'
-                                />
-                            </TouchableOpacity>
-                        </View>
-
-                    </View>
-                );
-            })
+                    );
+                })
             }
 
             <TouchableOpacity
                 onPress={()=>
-                    setModal(true)}
+                    setModalVisible(true)}
                 style={styles.buttonAddTarefa}
             >
                 <Text style={{textAlign: 'center',color:'white', fontFamily: 'Jost_400Regular', fontSize: 25}}>+</Text>
@@ -289,6 +284,6 @@ const styles = StyleSheet.create({
     saveText: {
         fontFamily: 'Jost_400Regular',
         fontSize: 15,
-        color: '#2B7A4B',
+        color: '#3D7199',
     },
 });
